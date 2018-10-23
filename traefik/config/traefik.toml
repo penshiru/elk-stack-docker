@@ -1,0 +1,38 @@
+# Traefik Global Configuration
+debug = false
+checkNewVersion = true
+logLevel = "DEBUG"
+
+
+defaultEntryPoints = ["http","https"]
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+  #   [entryPoints.http.redirect]
+  #     entryPoint = "https"
+  # [entryPoints.https]
+  # address = ":443"
+  #   [entryPoints.https.tls]
+  #      [[entryPoints.https.tls.certificates]]
+  #        certFile = "/local-cert/certificate.pem"
+  #        keyFile = "/local-cert/privkey.pem"
+  [entryPoints.dashboard]
+  address = ":8080"
+    [entryPoints.dashboard.auth.basic]
+    users = ["rene:$apr1$vs9LEQdz$sefGW9a12xtUALrt9g57B0"]
+
+# [acme]
+# email = "reneval@gmail.com"
+# storage = "acme.json"
+# entryPoint = "https"
+# onHostRule = true
+# [acme.httpChallenge]
+#   entryPoint = "http"
+# onDemand = false
+
+[api]
+entrypoint = "dashboard"
+
+
+[docker]

@@ -1,6 +1,19 @@
-version: '2'
+version: '3.3'
 
 services:
+  reverse-proxy:
+    image: traefik:1.7.3-alpine
+    ports:
+      - '80:80'
+      - '8080:8080'
+      - '443:443'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/config/traefik.toml:/etc/traefik/traefik.toml
+      # - ./traefik/config/acme.json:/acme.json
+      - ./local-cert:/local-cert
+    networks:
+      - elk
 
   elasticsearch:
     build:
@@ -10,12 +23,17 @@ services:
     volumes:
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - '9200:9200'
+      - '9300:9300'
     environment:
-      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ES_JAVA_OPTS: '-Xmx256m -Xms256m'
     networks:
       - elk
+    labels:
+      - traefik.backend=elasticsearch
+      - traefik.frontend.rule=Host:es.localhost
+      - traefik.port=9200
+      - traefik.docker.network=elk
 
   logstash:
     build:
@@ -25,16 +43,21 @@ services:
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/sample/:/usr/share/logstash/sample:ro
     ports:
-      - "5000:5000"
-      - "9600:9600"
+      - '5000:5000'
+      - '9600:9600'
     environment:
-      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      LS_JAVA_OPTS: '-Xmx256m -Xms256m'
     networks:
       - elk
     depends_on:
       - elasticsearch
-
+    labels:
+      - traefik.backend=logstash
+      - traefik.frontend.rule=Host:logstash.localhost
+      - traefik.port=9200
+      - traefik.docker.network=elk
   kibana:
     build:
       context: kibana/
@@ -43,13 +66,24 @@ services:
     volumes:
       - ./kibana/config/:/usr/share/kibana/config:ro
     ports:
-      - "5601:5601"
+      - '5601:5601'
     networks:
       - elk
     depends_on:
       - elasticsearch
+    labels:
+      - traefik.backend=kibana
+      - traefik.frontend.rule=Host:kibana.localhost
+      - traefik.port=5601
+      - traefik.docker.network=elk
+
+  whoami:
+    image: emilevauge/whoami # A container that exposes an API to show its IP address
+    labels:
+      - traefik.frontend.rule=Host:whoami.localhost
+    networks:
+      - elk
 
 networks:
-
   elk:
     driver: bridge
